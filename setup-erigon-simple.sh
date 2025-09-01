@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Olym3 Testnet Season 3 - Erigon Setup Script
-# ChainID: 256003
+# Olym3 Testnet Season 3 - Simple Erigon Setup Script
+# For direct execution on GCP VM
 # Author: Olym3 Labs DevOps Team
 
-set -e  # Exit on any error
+set -e
 
 echo "🚀 Starting Olym3 Testnet Season 3 Erigon Setup..."
 
@@ -12,9 +12,8 @@ echo "🚀 Starting Olym3 Testnet Season 3 Erigon Setup..."
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
-# Function to print colored output
 print_status() {
     echo -e "${GREEN}[INFO]${NC} $1"
 }
@@ -29,11 +28,11 @@ print_error() {
 
 # Update system packages
 print_status "Updating system packages..."
-sudo apt update && sudo apt upgrade -y
+apt update && apt upgrade -y
 
 # Install dependencies
 print_status "Installing dependencies..."
-sudo apt install -y \
+apt install -y \
     build-essential \
     git \
     curl \
@@ -43,23 +42,23 @@ sudo apt install -y \
     apt-transport-https \
     ca-certificates \
     gnupg \
-    lsb-release
+    lsb-release \
+    openssl \
+    net-tools
 
 # Install Go 1.21
 print_status "Installing Go 1.21..."
 if ! command -v go &> /dev/null; then
     wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz
-    sudo tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz
+    tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz
     echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.bashrc
     echo 'export PATH=$PATH:/usr/local/go/bin' >> ~/.profile
     export PATH=$PATH:/usr/local/go/bin
+    export GOTOOLCHAIN=local
     rm go1.21.5.linux-amd64.tar.gz
 else
     print_warning "Go is already installed"
 fi
-
-# Set Go version explicitly to avoid auto-upgrade
-export GOTOOLCHAIN=local
 
 # Verify Go installation
 print_status "Verifying Go installation..."
@@ -154,7 +153,7 @@ chmod 600 ~/jwt.hex
 
 # Create systemd service file
 print_status "Creating systemd service file..."
-sudo tee /etc/systemd/system/erigon.service > /dev/null << EOF
+cat > /etc/systemd/system/erigon.service << EOF
 [Unit]
 Description=Olym3 Testnet Season 3 Erigon Node
 After=network.target
@@ -213,8 +212,8 @@ EOF
 
 # Reload systemd and enable service
 print_status "Enabling Erigon service..."
-sudo systemctl daemon-reload
-sudo systemctl enable erigon.service
+systemctl daemon-reload
+systemctl enable erigon.service
 
 # Create startup script
 print_status "Creating startup script..."
@@ -269,7 +268,7 @@ echo "Chain Name: olym3-testnet-s3"
 echo ""
 
 echo "Service Status:"
-sudo systemctl status erigon.service --no-pager -l
+systemctl status erigon.service --no-pager -l
 
 echo ""
 echo "Process Status:"
@@ -294,10 +293,74 @@ ls -la ~/erigon_data/
 
 echo ""
 echo "Logs (last 20 lines):"
-sudo journalctl -u erigon.service -n 20 --no-pager
+journalctl -u erigon.service -n 20 --no-pager
 EOF
 
 chmod +x ~/check-erigon.sh
+
+# Create quick status script
+print_status "Creating quick status script..."
+cat > ~/quick-status.sh << 'EOF'
+#!/bin/bash
+# Olym3 Testnet Season 3 - Quick Status Check
+
+echo "=== Olym3 Testnet Season 3 Quick Status ==="
+echo "Chain ID: 256003"
+echo "Chain Name: olym3-testnet-s3"
+echo ""
+
+# Check if Erigon is running
+if systemctl is-active --quiet erigon; then
+    echo "✓ Erigon service is running"
+else
+    echo "✗ Erigon service is not running"
+fi
+
+# Check ports
+echo ""
+echo "Port Status:"
+if netstat -tlnp 2>/dev/null | grep -q ":30303"; then
+    echo "✓ P2P (30303): Listening"
+else
+    echo "✗ P2P (30303): Not listening"
+fi
+
+if netstat -tlnp 2>/dev/null | grep -q ":8545"; then
+    echo "✓ HTTP RPC (8545): Listening"
+else
+    echo "✗ HTTP RPC (8545): Not listening"
+fi
+
+if netstat -tlnp 2>/dev/null | grep -q ":8546"; then
+    echo "✓ WebSocket (8546): Listening"
+else
+    echo "✗ WebSocket (8546): Not listening"
+fi
+
+if netstat -tlnp 2>/dev/null | grep -q ":8551"; then
+    echo "✓ Engine API (8551): Listening"
+else
+    echo "✗ Engine API (8551): Not listening"
+fi
+
+# API test
+echo ""
+echo "API Test:"
+if curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}' http://localhost:8545 > /dev/null 2>&1; then
+    echo "✓ HTTP RPC API responding"
+else
+    echo "✗ HTTP RPC API not responding"
+fi
+
+echo ""
+echo "Quick Commands:"
+echo "  Start: systemctl start erigon"
+echo "  Stop:  systemctl stop erigon"
+echo "  Logs:  journalctl -u erigon -f"
+echo "  Full:  ./check-erigon.sh"
+EOF
+
+chmod +x ~/quick-status.sh
 
 # Create configuration summary
 print_status "Creating configuration summary..."
@@ -320,26 +383,27 @@ Network Ports:
 - Private API: 9090
 
 API Endpoints:
-- HTTP RPC: http://YOUR_IP:8545
-- WebSocket: ws://YOUR_IP:8546
-- Engine API: http://YOUR_IP:8551
-- Metrics: http://YOUR_IP:6060
+- HTTP RPC: http://$(hostname -I | awk '{print $1}'):8545
+- WebSocket: ws://$(hostname -I | awk '{print $1}'):8546
+- Engine API: http://$(hostname -I | awk '{print $1}'):8551
+- Metrics: http://$(hostname -I | awk '{print $1}'):6060
 
 Available APIs:
 - engine, eth, net, web3, debug, txpool, admin
 
 Service Management:
-- Start: sudo systemctl start erigon
-- Stop: sudo systemctl stop erigon
-- Restart: sudo systemctl restart erigon
-- Status: sudo systemctl status erigon
-- Logs: sudo journalctl -u erigon -f
+- Start: systemctl start erigon
+- Stop: systemctl stop erigon
+- Restart: systemctl restart erigon
+- Status: systemctl status erigon
+- Logs: journalctl -u erigon -f
 
 Manual Start:
 - ./start-erigon.sh
 
 Status Check:
 - ./check-erigon.sh
+- ./quick-status.sh
 
 JWT Secret: ~/jwt.hex (for Engine API authentication)
 
@@ -349,14 +413,12 @@ Pre-funded Addresses (1000 ETH each):
 - 0x147B8eb97fD247D06C4006D269c90C1908Fb5D54
 - 0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db
 - 0x78731D3Ca6b7E34aC0F824c42a7cC18A495cabaB
-
 EOF
 
 print_status "Setup completed successfully!"
 print_status "Configuration summary saved to: ~/erigon-config-summary.txt"
-print_status "To start Erigon service: sudo systemctl start erigon"
-print_status "To check status: ./check-erigon.sh"
-print_status "To view logs: sudo journalctl -u erigon -f"
+print_status "To start Erigon service: systemctl start erigon"
+print_status "To check status: ./quick-status.sh"
 
 echo ""
 echo "🎉 Olym3 Testnet Season 3 Erigon setup completed!"

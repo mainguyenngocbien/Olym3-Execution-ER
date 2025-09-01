@@ -395,7 +395,7 @@ create_firewall_rules() {
         --source-ranges=0.0.0.0/0 \
         --target-tags=olym3-node \
         --description="Olym3 Testnet Season 3 P2P ports" \
-        --quiet || print_warning "Firewall rule olym3-p2p already exists"
+        --quiet 2>/dev/null || print_warning "Firewall rule olym3-p2p already exists"
     
     # Create firewall rule for RPC endpoints
     gcloud compute firewall-rules create olym3-rpc \
@@ -407,7 +407,7 @@ create_firewall_rules() {
         --source-ranges=0.0.0.0/0 \
         --target-tags=olym3-node \
         --description="Olym3 Testnet Season 3 RPC ports" \
-        --quiet || print_warning "Firewall rule olym3-rpc already exists"
+        --quiet 2>/dev/null || print_warning "Firewall rule olym3-rpc already exists"
 }
 
 # Create VM instance
@@ -427,8 +427,7 @@ create_vm_instance() {
         --maintenance-policy=MIGRATE \
         --provisioning-model=STANDARD \
         --service-account=default \
-        --scopes=https://www.googleapis.com/auth/cloud-platform \
-        --create-disk=auto-delete=yes,boot=yes,device-name=$INSTANCE_NAME,image=projects/$IMAGE_PROJECT/global/images/family/$IMAGE_FAMILY,mode=rw,size=$DISK_SIZE,type=projects/$PROJECT_ID/zones/$ZONE/diskTypes/pd-ssd \
+        --scopes=https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/compute,https://www.googleapis.com/auth/devstorage.full_control \
         --no-shielded-secure-boot \
         --shielded-vtpm \
         --shielded-integrity-monitoring \
