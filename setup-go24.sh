@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Olym3 Testnet Season 3 - Quick Setup Script
+# Olym3 Testnet Season 3 - Quick Setup with Go 1.24
 # For immediate execution on existing GCP VM
 # Author: Olym3 Labs DevOps Team
 
 set -e
 
-echo "🚀 Starting Olym3 Testnet Season 3 Quick Setup..."
+echo "🚀 Starting Olym3 Testnet Season 3 Setup with Go 1.24..."
 
 # Colors for output
 RED='\033[0;31m'
