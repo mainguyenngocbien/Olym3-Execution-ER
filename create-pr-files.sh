@@ -43,7 +43,7 @@ cat > pr-files/network_id.patch << 'EOF'
  	HoodiChainID   = 560048
  	GnosisChainID  = 100
  	ChiadoChainID  = 10200
-+	Olym3TestnetS3ChainID = 256000
++	Olym3TestnetS3ChainID = 256003
  )
  
  var NetworkNameByID = make(map[uint64]string)
@@ -76,7 +76,7 @@ print_status "Created network_name.patch"
 print_header "Creating Chain Configuration File"
 cat > pr-files/execution/chain/spec/chainspecs/olym3-testnet-s3.json << 'EOF'
 {
-  "chainId": 256000,
+  "chainId": 256003,
   "chainName": "Olym3 Testnet Season 3",
   "consensus": "aura",
   "genesis": {
@@ -107,7 +107,7 @@ cat > pr-files/execution/chain/spec/chainspecs/olym3-testnet-s3.json << 'EOF'
     "baseFeePerGas": "0x0"
   },
   "config": {
-    "chainId": 256000,
+    "chainId": 256003,
     "chainName": "Olym3 Testnet Season 3",
     "consensus": "aura",
     "homesteadBlock": 0,
